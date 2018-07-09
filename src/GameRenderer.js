@@ -86,22 +86,28 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
   function _moveDots(moveAmount) {
     var children = _canvasElem.childNodes;
     var len = children.length;
+    var shouldCheckOffscreen = true;
 
+    // Move dots from bottom of screen to top of screen to optimize offscreen removal
     for (var i = len - 1; i >= 0; i--) {
       // surround with try-catch b/c dot elements can get removed during move
       try {
         var dotElem = children[i];
         var dotY = parseInt(dotElem.getAttribute("cy"));
 
-        var isOffscreen = _isDotOffscreen(dotElem, dotY);
-        if (isOffscreen) {
-          _removeDot(dotElem);
-          return;
+        // Remove any offscreen dots
+        if (shouldCheckOffscreen) {
+          var isOffscreen = _isDotOffscreen(dotElem, dotY);
+          if (isOffscreen) {
+            _removeDot(dotElem);
+            continue;
+          } else {
+            shouldCheckOffscreen = false;
+          }
         }
 
         var newDotY = parseInt(dotY + moveAmount);
         dotElem.setAttribute("cy", newDotY);
-
       } catch (ex) {
       }
     }
@@ -123,11 +129,11 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
   /**
    * Handles clicks on dots.
    * 
-   * @param {Event} evt The click event
+   * @param {Event} event The click event
    */
-  function _handleDotClick(evt) {
+  function _handleDotClick(event) {
     // Get the clicked dot element
-    var dotElem = evt.target;
+    var dotElem = event.target;
     if (!dotElem.hasAttribute("data-dot-score")) {
       // Not the dot element
       return;
@@ -143,7 +149,7 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
     _dotClickedCb.apply(null, [dotScore]);
 
     // Cancel event bubbling
-    evt.stopPropagation();
+    event.stopPropagation();
   }
 
   /**
@@ -162,13 +168,14 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
       return true;
     }
 
-    // Dot is offscreen when the top of the dot is beyond the height of the canvas
-    var dotX = parseInt(dotElem.getAttribute("cx"));
-    var dotLeftX = dotX - radiusVal;
-    var isOffscreenX = (dotLeftX > _canvasModel.width);
-    if (isOffscreenX) {
-      return true;
-    }
+    // Dot is offscreen when the left side of the dot is beyond the width of the canvas
+    // Disabled to improve performance
+    // var dotX = parseInt(dotElem.getAttribute("cx"));
+    // var dotLeftX = dotX - radiusVal;
+    // var isOffscreenX = (dotLeftX > _canvasModel.width);
+    // if (isOffscreenX) {
+    //   return true;
+    // }
 
     return false;
   }

@@ -3,7 +3,6 @@ function DotModel(score, startX, startY, radius, fillColor, strokeWidth, strokeC
   this.x = startX;
   this.y = startY;
   this.radius = radius;
-  this.diameter = radius * 2;
   this.fillColor = fillColor;
   this.strokeWidth = strokeWidth;
   this.strokeColor = strokeColor;

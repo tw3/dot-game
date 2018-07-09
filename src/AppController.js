@@ -20,7 +20,7 @@
   * App starts here, this singleton coordinates the interaction
   * between the score, the slider, and the game.
   */
-AppController = (function () {
+var AppController = (function () {
   "use strict";
 
   var _scoreController;
@@ -79,7 +79,7 @@ AppController = (function () {
    */
   function _throttle(func, duration) {
     var throttledFunction = function() {
-      if ( !_resizeTimeout ) {
+      if (!_resizeTimeout) {
         _resizeTimeout = setTimeout(function() {
           _resizeTimeout = null;
           func();

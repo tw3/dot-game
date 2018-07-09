@@ -1,171 +1,112 @@
 /**
- * Controls the slider.
+ * For most classes I chose to implement OOP using the
+ * "revealing module pattern" instead of using prototype
+ * functions to provide encapsulation of private member
+ * variables and methods and avoid annoying references
+ * to "this" since we don't use inheritance for this project.
  * 
- * @param {number} _minVal The minimum value for the slider 
- * @param {number} _maxVal The maximum value for the slider
- * @param {number} _initVal The initial value for the slider
- */
-function SliderController(_minVal, _maxVal, _initVal) {
-  var _sliderRenderer;
-
-  /**
-   * Initializes the slider.
-   */
-  function _init() {
-    var sliderContainerElem = document.getElementById('sliderContainer');
-    _sliderRenderer = new SliderRenderer(sliderContainerElem,
-      _minVal, _maxVal, _initVal);
-    _sliderRenderer.drawSlider();
-  }
-
-  /**
-   * Adds an event handler for when the slider changes.
-   * 
-   * @param {Function} sliderChangeCB A callback function for when the slider changes
-   */
-  function _addChangeHandler(sliderChangeCB) {
-    _sliderRenderer.addChangeHandler(sliderChangeCB);
-  }
-
-  // Initialize immediately
-  _init();
-
-  // Expose a method to add a change event handler
-  return {
-    addChangeHandler: _addChangeHandler
-	};
-
-}
-/**
- * Renders the slider.
+ * https://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
  * 
- * @param {ELement} _parent The parent element for the slider 
- * @param {number} _minVal The minimum value for the slider
- * @param {number} _maxVal The maximum value for the slider
- * @param {number} _initVal The initial value for the slider
- */
-function SliderRenderer(_parent, _minVal, _maxVal, _initVal) {
-  var _sliderElem;
-
-  /**
-   * Initializes the renderer.
-   */
-  function _init() {
-  }
-
-  /**
-   * Draws the slider.
-   */
-  function _drawSlider() {
-    _sliderElem = document.createElement("input");
-    _sliderElem.setAttribute("type", "range");
-    _sliderElem.setAttribute("min", _minVal);
-    _sliderElem.setAttribute("max", _maxVal);
-    _sliderElem.setAttribute("value", _initVal);
-    _parent.appendChild(_sliderElem);
-  }
-
-  /**
-   * Adds an event handler for the when the slider value changes
-   * 
-   * @param {Function} sliderChangeCB A callback function for when the slider changes
-   */
-  function _addChangeHandler(sliderChangeCB) {
-    _sliderElem.addEventListener("change", function(event) {
-      var newValue = parseInt(event.target.value);
-      sliderChangeCB.apply(null, [newValue]);
-    });
-  }
-
-  // Initialize immediately
-  _init();
-
-  // Expose some methods to draw the slider and listen for changes
-  return {
-    drawSlider: _drawSlider,
-    addChangeHandler: _addChangeHandler
-	};
-
-}
-/**
- * Controls the score.
- */
-function ScoreController() {
-  var _scoreRenderer;
-  var _totalScore = 0;
-
-  /**
-   * Initializes the score.
-   */
-  function _init() {
-    var scoreElem = document.getElementById('score');
-    _scoreRenderer = new ScoreRenderer(scoreElem);
-    _scoreRenderer.drawScore(_totalScore);
-  }
-
-  /**
-   * Updates the total score.
-   * 
-   * @param {number} dotModelScore A new score to add to the total score
-   */
-  function _updateScore(dotModelScore) {
-    _totalScore = _totalScore + dotModelScore;
-    _scoreRenderer.drawScore(_totalScore);
-  }
-
-  // Initialize immediately
-  _init();
-
-  // Expose a method to update the score
-  return {
-    updateScore: _updateScore
-	};
-
-}
-/**
- * Renders the score.
+ * Another option is the "revealing prototype pattern"
+ * which might be suitable if we needed inheritance.
  * 
- * @param {Element} _parent The parent element for the score 
+ * There many ways to optimize this code using TypeScript,
+ * e.g. add types to prevent unwanted type casting, use modules
+ * to import and export classes or functions, make use of many
+ * of the new Array prototype functions.
  */
-function ScoreRenderer(_parent) {
 
-  /**
-   * Initializes the renderer.
-   */
-  function _init() {
-  }
+ /**
+  * App starts here, this singleton coordinates the interaction
+  * between the score, the slider, and the game.
+  */
+var AppController = (function () {
+  "use strict";
 
-  /**
-   * Draws the new score
-   * 
-   * @param {number} newScore The new score 
-   */
-  function _drawScore(newScore) {
-    _parent.innerHTML = newScore;
-  }
+  var _scoreController;
+  var _sliderController;
+  var _gameController;
 
-  // Initialize immediately
-  _init();
-
-  // Expose a method to draw the new score
-  return {
-    drawScore: _drawScore
+  var _settings = {
+    minDotRadius: 5,
+    maxDotRadius: 50,
+    minSpeed: 10,
+    maxSpeed: 100,
+    initSpeed: 10,
+    renderRate: 100
   };
-}
-function CanvasModel(width, height) {
-  this.width = width;
-  this.height = height;
-}
-function DotModel(score, startX, startY, radius, fillColor, strokeWidth, strokeColor) {
-  this.score = score; // score for this dot
-  this.x = startX;
-  this.y = startY;
-  this.radius = radius;
-  this.diameter = radius * 2;
-  this.fillColor = fillColor;
-  this.strokeWidth = strokeWidth;
-  this.strokeColor = strokeColor;
-}
+
+  var _resizeTimeout;
+
+  /**
+   * Initializes the app.
+   */
+  function _init() {
+    // Create controllers
+    _scoreController = new ScoreController();
+
+    _sliderController = new SliderController(_settings.minSpeed,
+      _settings.maxSpeed, _settings.initSpeed);
+
+    _gameController = new GameController(_scoreController, _settings);
+    
+    // Add slider change handler
+    _sliderController.addChangeHandler(_handleSliderChange);
+
+    // React to window resize events
+    // https://developer.mozilla.org/en-US/docs/Web/Events/resize
+    window.addEventListener("resize", _throttle(_handleWindowResize, 200), false);
+
+    // Start game
+    _gameController.start();
+  }
+
+  /**
+   * Updates the game with the new speed from the slider.
+   * 
+   * @param {number} newSpeed New speed from the slider
+   */
+  function _handleSliderChange(newSpeed) {
+    _gameController.updateSpeed(newSpeed);
+  }
+
+  /**
+   * Throttles calls the input function.
+   * 
+   * @param {Function} func Function to trigger after throttling 
+   * @param {number} duration Throttle duration in milliseconds
+   * @returns {Function} The throttled function
+   */
+  function _throttle(func, duration) {
+    var throttledFunction = function() {
+      if (!_resizeTimeout) {
+        _resizeTimeout = setTimeout(function() {
+          _resizeTimeout = null;
+          func();
+        }, duration);
+      }
+    }
+    return throttledFunction;
+  }
+
+  /**
+   * Updates the app when the window is resized.
+   */
+  function _handleWindowResize() {
+    _gameController.handleResize();
+  }
+
+  // Initialize the app when the page is loaded.
+  window.addEventListener("load", function(event) {
+    _init();
+  });
+
+	return {
+  // No public methods to expose
+};
+
+})();
+
 /**
  * Controls the game.
  * 
@@ -360,6 +301,7 @@ function GameController(_scoreController, /* "dependency injection" */
 	};
 
 }
+
 /**
  * The game renderer.
  * 
@@ -448,22 +390,28 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
   function _moveDots(moveAmount) {
     var children = _canvasElem.childNodes;
     var len = children.length;
+    var shouldCheckOffscreen = true;
 
+    // Move dots from bottom of screen to top of screen to optimize offscreen removal
     for (var i = len - 1; i >= 0; i--) {
       // surround with try-catch b/c dot elements can get removed during move
       try {
         var dotElem = children[i];
         var dotY = parseInt(dotElem.getAttribute("cy"));
 
-        var isOffscreen = _isDotOffscreen(dotElem, dotY);
-        if (isOffscreen) {
-          _removeDot(dotElem);
-          return;
+        // Remove any offscreen dots
+        if (shouldCheckOffscreen) {
+          var isOffscreen = _isDotOffscreen(dotElem, dotY);
+          if (isOffscreen) {
+            _removeDot(dotElem);
+            continue;
+          } else {
+            shouldCheckOffscreen = false;
+          }
         }
 
         var newDotY = parseInt(dotY + moveAmount);
         dotElem.setAttribute("cy", newDotY);
-
       } catch (ex) {
       }
     }
@@ -485,11 +433,11 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
   /**
    * Handles clicks on dots.
    * 
-   * @param {Event} evt The click event
+   * @param {Event} event The click event
    */
-  function _handleDotClick(evt) {
+  function _handleDotClick(event) {
     // Get the clicked dot element
-    var dotElem = evt.target;
+    var dotElem = event.target;
     if (!dotElem.hasAttribute("data-dot-score")) {
       // Not the dot element
       return;
@@ -505,7 +453,7 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
     _dotClickedCb.apply(null, [dotScore]);
 
     // Cancel event bubbling
-    evt.stopPropagation();
+    event.stopPropagation();
   }
 
   /**
@@ -524,13 +472,14 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
       return true;
     }
 
-    // Dot is offscreen when the top of the dot is beyond the height of the canvas
-    var dotX = parseInt(dotElem.getAttribute("cx"));
-    var dotLeftX = dotX - radiusVal;
-    var isOffscreenX = (dotLeftX > _canvasModel.width);
-    if (isOffscreenX) {
-      return true;
-    }
+    // Dot is offscreen when the left side of the dot is beyond the width of the canvas
+    // Disabled to improve performance
+    // var dotX = parseInt(dotElem.getAttribute("cx"));
+    // var dotLeftX = dotX - radiusVal;
+    // var isOffscreenX = (dotLeftX > _canvasModel.width);
+    // if (isOffscreenX) {
+    //   return true;
+    // }
 
     return false;
   }
@@ -555,111 +504,176 @@ function GameRenderer(_parent, _canvasModel, _maxDotRadius, _dotClickedCb) {
   };
   
 }
+
 /**
- * For most classes I chose to implement OOP using the
- * "revealing module pattern" instead of using prototype
- * functions to provide encapsulation of private member
- * variables and methods and avoid annoying references
- * to "this" since we don't use inheritance for this project.
- * 
- * https://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
- * 
- * Another option is the "revealing prototype pattern"
- * which might be suitable if we needed inheritance.
- * 
- * There many ways to optimize this code using TypeScript,
- * e.g. add types to prevent unwanted type casting, use modules
- * to import and export classes or functions, make use of many
- * of the new Array prototype functions.
+ * Controls the score.
  */
-
- /**
-  * App starts here, this singleton coordinates the interaction
-  * between the score, the slider, and the game.
-  */
-AppController = (function () {
-  "use strict";
-
-  var _scoreController;
-  var _sliderController;
-  var _gameController;
-
-  var _settings = {
-    minDotRadius: 5,
-    maxDotRadius: 50,
-    minSpeed: 10,
-    maxSpeed: 100,
-    initSpeed: 10,
-    renderRate: 100
-  };
-
-  var _resizeTimeout;
+function ScoreController() {
+  var _scoreRenderer;
+  var _totalScore = 0;
 
   /**
-   * Initializes the app.
+   * Initializes the score.
    */
   function _init() {
-    // Create controllers
-    _scoreController = new ScoreController();
-
-    _sliderController = new SliderController(_settings.minSpeed,
-      _settings.maxSpeed, _settings.initSpeed);
-
-    _gameController = new GameController(_scoreController, _settings);
-    
-    // Add slider change handler
-    _sliderController.addChangeHandler(_handleSliderChange);
-
-    // React to window resize events
-    // https://developer.mozilla.org/en-US/docs/Web/Events/resize
-    window.addEventListener("resize", _throttle(_handleWindowResize, 200), false);
-
-    // Start game
-    _gameController.start();
+    var scoreElem = document.getElementById('score');
+    _scoreRenderer = new ScoreRenderer(scoreElem);
+    _scoreRenderer.drawScore(_totalScore);
   }
 
   /**
-   * Updates the game with the new speed from the slider.
+   * Updates the total score.
    * 
-   * @param {number} newSpeed New speed from the slider
+   * @param {number} dotModelScore A new score to add to the total score
    */
-  function _handleSliderChange(newSpeed) {
-    _gameController.updateSpeed(newSpeed);
+  function _updateScore(dotModelScore) {
+    _totalScore = _totalScore + dotModelScore;
+    _scoreRenderer.drawScore(_totalScore);
+  }
+
+  // Initialize immediately
+  _init();
+
+  // Expose a method to update the score
+  return {
+    updateScore: _updateScore
+	};
+
+}
+
+/**
+ * Renders the score.
+ * 
+ * @param {Element} _parent The parent element for the score 
+ */
+function ScoreRenderer(_parent) {
+
+  /**
+   * Initializes the renderer.
+   */
+  function _init() {
   }
 
   /**
-   * Throttles calls the input function.
+   * Draws the new score
    * 
-   * @param {Function} func Function to trigger after throttling 
-   * @param {number} duration Throttle duration in milliseconds
-   * @returns {Function} The throttled function
+   * @param {number} newScore The new score 
    */
-  function _throttle(func, duration) {
-    var throttledFunction = function() {
-      if ( !_resizeTimeout ) {
-        _resizeTimeout = setTimeout(function() {
-          _resizeTimeout = null;
-          func();
-        }, duration);
-      }
-    }
-    return throttledFunction;
+  function _drawScore(newScore) {
+    _parent.innerHTML = newScore;
+  }
+
+  // Initialize immediately
+  _init();
+
+  // Expose a method to draw the new score
+  return {
+    drawScore: _drawScore
+  };
+}
+
+/**
+ * Controls the slider.
+ * 
+ * @param {number} _minVal The minimum value for the slider 
+ * @param {number} _maxVal The maximum value for the slider
+ * @param {number} _initVal The initial value for the slider
+ */
+function SliderController(_minVal, _maxVal, _initVal) {
+  var _sliderRenderer;
+
+  /**
+   * Initializes the slider.
+   */
+  function _init() {
+    var sliderContainerElem = document.getElementById('sliderContainer');
+    _sliderRenderer = new SliderRenderer(sliderContainerElem,
+      _minVal, _maxVal, _initVal);
+    _sliderRenderer.drawSlider();
   }
 
   /**
-   * Updates the app when the window is resized.
+   * Adds an event handler for when the slider changes.
+   * 
+   * @param {Function} sliderChangeCB A callback function for when the slider changes
    */
-  function _handleWindowResize() {
-    _gameController.handleResize();
+  function _addChangeHandler(sliderChangeCB) {
+    _sliderRenderer.addChangeHandler(sliderChangeCB);
   }
 
-  // Initialize the app when the page is loaded.
-  window.addEventListener("load", function(event) {
-    _init();
-  });
+  // Initialize immediately
+  _init();
 
-	return {
-  // No public methods to expose
-};
+  // Expose a method to add a change event handler
+  return {
+    addChangeHandler: _addChangeHandler
+	};
 
-})();
+}
+
+/**
+ * Renders the slider.
+ * 
+ * @param {ELement} _parent The parent element for the slider 
+ * @param {number} _minVal The minimum value for the slider
+ * @param {number} _maxVal The maximum value for the slider
+ * @param {number} _initVal The initial value for the slider
+ */
+function SliderRenderer(_parent, _minVal, _maxVal, _initVal) {
+  var _sliderElem;
+
+  /**
+   * Initializes the renderer.
+   */
+  function _init() {
+  }
+
+  /**
+   * Draws the slider.
+   */
+  function _drawSlider() {
+    _sliderElem = document.createElement("input");
+    _sliderElem.setAttribute("type", "range");
+    _sliderElem.setAttribute("min", _minVal);
+    _sliderElem.setAttribute("max", _maxVal);
+    _sliderElem.setAttribute("value", _initVal);
+    _parent.appendChild(_sliderElem);
+  }
+
+  /**
+   * Adds an event handler for the when the slider value changes
+   * 
+   * @param {Function} sliderChangeCB A callback function for when the slider changes
+   */
+  function _addChangeHandler(sliderChangeCB) {
+    _sliderElem.addEventListener("change", function(event) {
+      var newValue = parseInt(event.target.value);
+      sliderChangeCB.apply(null, [newValue]);
+    });
+  }
+
+  // Initialize immediately
+  _init();
+
+  // Expose some methods to draw the slider and listen for changes
+  return {
+    drawSlider: _drawSlider,
+    addChangeHandler: _addChangeHandler
+	};
+
+}
+
+function CanvasModel(width, height) {
+  this.width = width;
+  this.height = height;
+}
+
+function DotModel(score, startX, startY, radius, fillColor, strokeWidth, strokeColor) {
+  this.score = score; // score for this dot
+  this.x = startX;
+  this.y = startY;
+  this.radius = radius;
+  this.fillColor = fillColor;
+  this.strokeWidth = strokeWidth;
+  this.strokeColor = strokeColor;
+}
