@@ -1,0 +1,63 @@
+html,
+body,
+#app {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  font-family: "Comic Sans MS", sans-serif;
+}
+
+/* Avoid flicker on mobile display */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.appContainer {
+  padding: 8px 24px;
+}
+
+#scoreContainer {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  background-color: #999999;
+  height: 50px;
+}
+
+#score {
+  font-size: 2rem;
+}
+
+#speedContainer {
+  flex: 0 0 auto;
+  background-color: #999999;
+  height: 60px;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+#game {
+  flex: 1 1 auto;
+  background-color: #dcdcdc;
+  display: inline-block;
+  position: relative;
+}
+
+#game > svg {
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.game-dot {
+  cursor: crosshair;
+}

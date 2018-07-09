@@ -1,0 +1,28 @@
+{
+  "name": "dot-game",
+  "version": "1.0.0",
+  "description": "In this game, dots move from the top to the bottom of the screen. A player tries to click on the dots, and receives points when they are successful.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "./build.sh"
+  },
+  "dependencies": {
+    "express": "^4.15.0"
+  },
+  "engines": {
+		"node": "4.4.5"
+	},
+  "keywords": [
+    "node",
+    "express"
+  ],
+  "author": "Ted Weatherly",
+  "license": "MIT",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tw3/dot-game.git"
+  },
+  "homepage": "https://github.com/tw3/dot-game#readme"
+}
